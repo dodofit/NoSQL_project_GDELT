@@ -46,7 +46,6 @@ def extract(start, end, type, dir_data, trans):
 
 def transform(dir_data, start, end, type, trans):
     path = Path(dir_data)
-    print(trans)
     if trans==True:
         files = list(path.glob(f'*translation.{type}.csv'))
     else:
@@ -77,12 +76,9 @@ def main():
     start = dt.strptime(sys.argv[1], '%Y%m%d%H')
     end = dt.strptime(sys.argv[2], '%Y%m%d%H')
     type = sys.argv[3]
-    if len(sys.argv) == 5:
-        trans = True
-    else:
-        trans = False
-    print(trans)
-    dir_data = '/Users/dorianfitton/Documents/Cours_Télécom/NoSQL_project_GDELT.nosync/data/raw'
+    trans = sys.argv[4]
+
+    dir_data = './data/raw'
 
     extract(start, end, type, dir_data, trans)
     transform(dir_data, start, end, type, trans)
