@@ -1,0 +1,50 @@
+https://neo4j.com/docs/operations-manual/current/clustering/introduction/
+
+-------- Install ------------
+
+wget -O - https://debian.neo4j.com/neotechnology.gpg.key | sudo apt-key add -
+echo 'deb https://debian.neo4j.com stable latest' | sudo tee -a /etc/apt/sources.list.d/neo4j.list
+sudo apt-get update
+
+sudo apt-get install neo4j-enterprise=1:5.3.0
+
+- Java
+
+Sur les machines hadoop, Java 19 est installé, nous avons besoins de java 17 pour neo4j:
+
+sudo apt-get install openjdk-17-jre
+
+sudo update-alternatives --config java (il devrait y avoir une liste des versions de java, il faut rentrer le numero correspondant à java 17)
+
+- check java version:
+
+java -version
+
+
+--------- Basic cluster ----------
+
+- modifier fichier /etc/neo4j/neo4j.conf comme dans le tuto :
+    https://neo4j.com/docs/operations-manual/current/clustering/setup/deploy/#cluster-example-configure-a-three-primary-cluster
+
+pour utiliser les noms des serveurs et pas les ip (tp-hadoop-xx), il faut copier le contenu du fichier /etc/hosts du bridge
+au meme endroit dans chaque machines (/etc/hosts)
+
+- lancer le serveur (a faire sur chaque machine):
+sudo systemctl start neo4j
+
+- afficher le statut des serveurs:
+sudo systemctl status neo4j
+
+- stopper le serveur:
+sudo systemctl stop neo4j
+
+- acceder aux logs utilisateurs:
+journalctl -u neo4j
+
+- les autres logs (debug etc...) sont situés dans /var/log/neo4j
+
+- acceder au cypher shell:
+cypher-shell
+
+- voir la liste des serveurs:
+cypher-shell: SHOW SERVER;
