@@ -109,7 +109,7 @@ def transform(dir_data, start, end, type, trans):
         df['TranslationInfo'] = df['TranslationInfo'].astype(str).apply(
             lambda x: re.sub(r'(srclc:)([a-z]+)(.*)', r'\2', x))  # extracting language information
     else:
-        df.to_csv(dir_data + f'/dataset_{type}_from_{start}_to_{end}.csv')
+        df.to_csv(dir_data + f'/dataset_{type}_from_{start}_to_{end}.csv')#
 
 
 def load():
