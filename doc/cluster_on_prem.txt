@@ -50,6 +50,7 @@ cypher-shell
 cypher-shell: SHOW SERVER;
 
 ----------- Access UI on local machine -----------
+https://iximiuz.com/en/posts/ssh-tunnels/
 
 ssh -L localhost:7474:tp-hadoop-10:7474 ubuntu@137.194.211.146
 
