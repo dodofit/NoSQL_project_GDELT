@@ -174,9 +174,9 @@ def unzip_transform(filepath, dir_data, start, end, type):
         # Extracting all the members of the zip
         # into a specific location.
         zObject.extractall(path=dir_data)
-    csv_path = filepath[:-4]
+    csv_path = filepath[:-7]+'csv'
     os.remove(filepath)
-    os.rename(csv_path, csv_path.replace('CSV', 'csv'))
+    #os.rename(csv_path, csv_path.replace('CSV', 'csv'))
     print('csv_path = {}'.format(csv_path))
 
     #with open(csv_path, 'r') as file:
