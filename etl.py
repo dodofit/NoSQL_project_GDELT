@@ -149,7 +149,7 @@ def transform(dir_data, file, start, end, type):
                                     names=headers,
                                     dtype={'GlobalEventID':'object', 'Day':'object', 'MonthYear':'object', 'Year':'object','FractionDate': 'object','IsRootEvent':'object','EventCode':'object', 'EventBaseCode':'object', 'EventRootCode':'object', 'QuadClass':'object','Actor1Geo_Type':'object','Actor2Geo_Type':'object','ActionGeo_Type':'object'}
                                     )
-    dir_dest = dir_data+'/headers_'+str(file)[12:-3]+'pkl'
+    dir_dest = dir_data+'/headers_'+str(file)[13:-3]+'pkl'
     print(dir_dest)
     df.to_pickle(dir_dest)
 
@@ -230,13 +230,7 @@ def sequential():
             pool.apply_async(unzip_transform(dir_data+'/'+file_name, dir_data,start, end, type))
 
     print(f"Total time: {time.time() - t0}")
-    # extract(start, end, type, dir_data, trans)
 
-    #path = Path(dir_data)
-    #files = list(path.glob(f'*.{type}.csv'))
-    #for file in files:
-     #   transform(dir_data,file, start, end, type)
-     #   os.remove(file)
 
 def main_test():
     start = dt.strptime(sys.argv[1], '%Y%m%d%H')
