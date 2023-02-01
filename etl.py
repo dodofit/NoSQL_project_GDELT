@@ -12,7 +12,7 @@ ext_dict = {'export': 'CSV',
             'mentions': 'CSV',
             'gkg': 'csv'}
 
-dir_data = 'data/raw'
+dir_data = './data/raw'
 
 def create_urls(date_range, type, trans):
     extension = ext_dict[type]
