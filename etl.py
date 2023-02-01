@@ -7,6 +7,8 @@ from zipfile import ZipFile
 import re, time, requests
 from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool
+import threading
+import subprocess
 
 ext_dict = {'export': 'CSV',
             'mentions': 'CSV',
@@ -20,7 +22,7 @@ def create_urls(date_range, type, trans):
     urls_trans = [f'http://data.gdeltproject.org/gdeltv2/{date.strftime("%Y%m%d%H%M%S")}.translation.{type}.{extension}.zip' for date in date_range]
     #else:
     urls = [f'http://data.gdeltproject.org/gdeltv2/{date.strftime("%Y%m%d%H%M%S")}.{type}.{extension}.zip' for date in date_range]
-    return urls,urls_trans
+    return urls+urls_trans
 
 def create_fns(date_range, type, trans):
     extension = ext_dict[type]
@@ -28,7 +30,7 @@ def create_fns(date_range, type, trans):
     fns_trans = [f'{date.strftime("%Y%m%d%H%M%S")}.translation.{type}.{extension}.zip' for date in date_range]
     #else:
     fns = [f'{date.strftime("%Y%m%d%H%M%S")}.{type}.{extension}.zip' for date in date_range]
-    return fns,fns_trans
+    return fns+fns_trans
 
 def download_url(args):
     t0 = time.time()
@@ -147,13 +149,41 @@ def transform(dir_data, file, start, end, type):
                                     names=headers,
                                     dtype={'GlobalEventID':'object', 'Day':'object', 'MonthYear':'object', 'Year':'object','FractionDate': 'object','IsRootEvent':'object','EventCode':'object', 'EventBaseCode':'object', 'EventRootCode':'object', 'QuadClass':'object','Actor1Geo_Type':'object','Actor2Geo_Type':'object','ActionGeo_Type':'object'}
                                     )
-    dir_dest = dir_data+'/headers_'+str(file)[9:-3]+'pkl'
+    dir_dest = dir_data+'/headers_'+str(file)[12:-3]+'pkl'
     print(dir_dest)
     df.to_pickle(dir_dest)
 
     return None
 
+def download_zip_2(urls, fns):
+    t0 = time.time()
+    url, fn = urls, fns
+    filepath = f'{dir_data}/{fn}'
+    try:
+        # Download the zip files, subprocess is used to run a function (wget here) while letting the principal threads working
+        subprocess.call(['wget', '-O', filepath, url])
+    except Exception as e:
+        print(f'Error for {fn}')
+        print(e)
+    return (filepath, time.time() - t0)
 
+
+
+def unzip_transform(filepath, dir_data, start, end, type):
+    with ZipFile(filepath, 'r') as zObject:
+        # Extracting all the members of the zip
+        # into a specific location.
+        zObject.extractall(path=dir_data)
+    csv_path = filepath[:-4]
+    os.remove(filepath)
+    os.rename(csv_path, csv_path.replace('CSV', 'csv'))
+    print('csv_path = {}'.format(csv_path))
+
+    #with open(csv_path, 'r') as file:
+    #print('open csv path = {}'.format(file))
+    transform(dir_data, csv_path, start, end, type)
+
+    os.remove(csv_path)
 
 
 def load():
@@ -163,12 +193,60 @@ def main():
     start = dt.strptime(sys.argv[1], '%Y%m%d%H')
     end = dt.strptime(sys.argv[2], '%Y%m%d%H')
     type = sys.argv[3]
+    trans = sys.argv[4] == True
+    date_range = pd.date_range(start, end, freq='15T').to_pydatetime()
+    urls=create_urls(date_range, type, trans)
+    fns= create_fns(date_range, type, trans)
+    inputs = zip(urls, fns)
+
+    t0 = time.time()
+    results = download_parallel(inputs)
+    unzip_parallel(results)
+    # extract(inputs)
+    print(f"Total time: {time.time() - t0}")
+    # extract(start, end, type, dir_data, trans)
+
+def sequential():
+    start = dt.strptime(sys.argv[1], '%Y%m%d%H')
+    end = dt.strptime(sys.argv[2], '%Y%m%d%H')
+    type = sys.argv[3]
     trans = sys.argv[4] == 'True'
     date_range = pd.date_range(start, end, freq='15T').to_pydatetime()
-    urls, urls_trans = create_urls(date_range, type, trans)
-    fns, fns_trans = create_fns(date_range, type, trans)
-    urls = urls+urls_trans
-    fns=fns+ fns_trans
+    urls= create_urls(date_range, type, trans)
+    fns= create_fns(date_range, type, trans)
+
+    inputs = zip(urls, fns)
+    print(inputs)
+
+    t0 = time.time()
+    #results = download_parallel(inputs)
+    #unzip_parallel(results)
+    # extract(inputs)
+    cpus = cpu_count()
+    with ThreadPool(processes=cpus-1) as pool:
+        for url, file_name in inputs:
+            pool.apply_async(download_zip_2(url, file_name))
+            dir = dir_data+'/'+file_name
+            pool.apply_async(unzip_transform(dir_data+'/'+file_name, dir_data,start, end, type))
+
+    print(f"Total time: {time.time() - t0}")
+    # extract(start, end, type, dir_data, trans)
+
+    #path = Path(dir_data)
+    #files = list(path.glob(f'*.{type}.csv'))
+    #for file in files:
+     #   transform(dir_data,file, start, end, type)
+     #   os.remove(file)
+
+def main_test():
+    start = dt.strptime(sys.argv[1], '%Y%m%d%H')
+    end = dt.strptime(sys.argv[2], '%Y%m%d%H')
+    type = sys.argv[3]
+    trans = sys.argv[4] == 'True'
+    date_range = pd.date_range(start, end, freq='15T').to_pydatetime()
+    urls= create_urls(date_range, type, trans)
+    fns= create_fns(date_range, type, trans)
+
     inputs = zip(urls, fns)
 
     t0 = time.time()
@@ -184,4 +262,4 @@ def main():
         transform(dir_data,file, start, end, type)
         os.remove(file)
 if __name__=='__main__':
-    main()
+    sequential()
