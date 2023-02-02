@@ -183,7 +183,7 @@ def unzip_transform(filepath, dir_data, start, end, type):
     #print('open csv path = {}'.format(file))
     transform(dir_data, csv_path, start, end, type)
 
-    #os.remove(csv_path)
+    os.remove(csv_path)
 
 
 def load():
