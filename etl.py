@@ -82,6 +82,16 @@ def unzip_parallel(args):
     results = pool.imap_unordered(unzip, args, chunksize=5)
     pool.close()
     pool.join()
+def remove_files(dir_data):
+    files_list = glob.glob(dir_data+'/*', recursive=True)
+    batch_files = glob.glob(dir_data+'/batch*', recursive=True)
+    wrong = [i for i in files_list if i not in batch_files]
+    #print(wrong)
+    for file_path in wrong:
+        try:
+            os.remove(file_path)
+        except OSError:
+            print("Error while deleting file {}".format(file_path))
 
 def extract(inputs):
     for input in inputs:
@@ -107,7 +117,6 @@ def transform(dir_data, file, start, end, type):
                                     on_bad_lines=None,
                                     encoding='ISO-8859-1',
                                     names=headers,
-                                    dtype={'DATE': "object", 'GKGRecordID': 'object', 'SourceCollectionIdentifier':'object'}
                                     )
         df['TranslationInfo'] = df['TranslationInfo'].astype(str).apply(
             lambda x: re.sub(r'(srclc:)([a-z]+)(.*)', r'\2', x))  # extracting language information
@@ -120,9 +129,7 @@ def transform(dir_data, file, start, end, type):
                                     on_bad_lines=None,
                                     encoding='ISO-8859-1',
                                     names=headers,
-                                    dtype={'GlobalEventID':'object', 'EventTimeDate':'object', 'MentionTimeDate':'object',
-       'MentionType':'object'}
-                         )
+                     )
 
 
         df['MentionDocTranslationInfo'] = df['MentionDocTranslationInfo'].astype(str).apply(
@@ -147,13 +154,77 @@ def transform(dir_data, file, start, end, type):
                                     on_bad_lines=None,
                                     encoding='ISO-8859-1',
                                     names=headers,
-                                    dtype={'GlobalEventID':'object', 'Day':'object', 'MonthYear':'object', 'Year':'object','FractionDate': 'object','IsRootEvent':'object','EventCode':'object', 'EventBaseCode':'object', 'EventRootCode':'object', 'QuadClass':'object','Actor1Geo_Type':'object','Actor2Geo_Type':'object','ActionGeo_Type':'object'}
-                                    )
+                                    usecols = ['GlobalEventID','Day',	'Actor1Code',	'Actor1Name',	'Actor1CountryCode','Actor2Code',	'Actor2Name',	'Actor2CountryCode',	'IsRootEvent',	'EventCode',	'EventBaseCode',	'EventRootCode',	'QuadClass',	'GoldsteinScale',	'NumMentions',	'NumSources',	'NumArticles',	'AvgTone',	'Actor1Geo_Type',	'Actor1Geo_FullName',	'Actor1Geo_Lat',	'Actor1Geo_Long',	'Actor2Geo_Type',	'Actor2Geo_FullName',	'Actor2Geo_Lat',	'Actor2Geo_Long',	'ActionGeo_Type',	'ActionGeo_FullName',	'ActionGeo_Lat',	'ActionGeo_Long',	'DATEADDED']
+                        )
     dir_dest = dir_data+'/headers_'+str(file)[13:-3]+'pkl'
     print(dir_dest)
     df.to_pickle(dir_dest)
 
     return None
+
+def transform_batch(dir_data, start, end, type):
+    path = Path(dir_data)
+    files = list(path.glob(f'*translation.{type}.csv'))
+    if type=='gkg':
+        headers = ['GKGRecordID', 'DATE', 'SourceCollectionIdentifier', 'SourceCommonName', 'DocumentIdentifier',
+                   'Counts', 'V2Counts', 'Themes', 'V2Themes', 'Locations', 'V2Locations', 'Persons', 'V2Persons',
+                   'Organizations', 'V2Organizations', 'V2Tone', 'Dates', 'GCAM', 'SharingImage', 'RelatedImages',
+                   'SocialImageEmbeds', 'SocialVideoEmbeds', 'Quotations', 'AllNames', 'Amounts', 'TranslationInfo','Extras']
+        df = pd.concat([pd.read_csv(file, delimiter="\t",
+                                    header=None,
+                                    on_bad_lines=None,
+                                    encoding='ISO-8859-1',
+                                    names=headers,
+                                    usecols= ['GKGRecordID','DATE','SourceCollectionIdentifier','SourceCommonName','DocumentIdentifier','Counts','Themes','Organizations','V2Tone','Dates','TranslationInfo']
+                                    )
+                                    for file in files]
+                        )
+        #df['TranslationInfo'] = df['TranslationInfo'].astype(str).apply(
+        #    lambda x: re.sub(r'(srclc:)([a-z]+)(.*)', r'\2', x))  # extracting language information
+    elif type=='mentions':
+        headers = ['GlobalEventID', 'EventTimeDate', 'MentionTimeDate', 'MentionType', 'MentionSourceName',
+                   'MentionIdentifier', 'SentenceID', 'Actor1CharOffset', 'Actor2CharOffset', 'ActionCharOffset',
+                   'InRawText', 'Confidence', 'MentionDocLen', 'MentionDocTone', 'MentionDocTranslationInfo','Extras']
+        df = pd.concat([pd.read_csv(file,delimiter="\t",
+                                    header=None,
+                                    on_bad_lines=None,
+                                    encoding='ISO-8859-1',
+                                    names=headers,
+                                    usecols=['GlobalEventID','EventTimeDate','MentionTimeDate','MentionType','MentionSourceName','MentionIdentifier','SentenceID','Confidence','MentionDocLen','MentionDocTone','MentionDocTranslationInfo']
+                     )
+                     for file in files]
+                        )
+
+
+        df['MentionDocTranslationInfo'] = df['MentionDocTranslationInfo'].astype(str).apply(
+            lambda x: re.sub(r'(srclc:)([a-z]+)(.*)', r'\2', x))  # extracting language information
+    else:
+        headers= ['GlobalEventID','Day',    'MonthYear',    'Year', 'FractionDate', 'Actor1Code',
+                  'Actor1Name', 'Actor1CountryCode',    'Actor1KnownGroupCode', 'Actor1EthnicCode',
+                  'Actor1Religion1Code',    'Actor1Religion2Code',  'Actor1Type1Code',  'Actor1Type2Code',
+                  'Actor1Type3Code',    'Actor2Code',   'Actor2Name',   'Actor2CountryCode',
+                  'Actor2KnownGroupCode',   'Actor2EthnicCode', 'Actor2Religion1Code',  'Actor2Religion2Code',
+                  'Actor2Type1Code',    'Actor2Type2Code',  'Actor2Type3Code',  'IsRootEvent',  'EventCode',
+                  'EventBaseCode',  'EventRootCode',    'QuadClass',    'GoldsteinScale',   'NumMentions',
+                  'NumSources', 'NumArticles',  'AvgTone',  'Actor1Geo_Type',   'Actor1Geo_FullName',
+                  'Actor1Geo_CountryCode',  'Actor1Geo_ADM1Code',   'Actor1Geo_ADM2Code',   'Actor1Geo_Lat',
+                  'Actor1Geo_Long', 'Actor1Geo_FeatureID',  'Actor2Geo_Type',   'Actor2Geo_FullName',
+                  'Actor2Geo_CountryCode',  'Actor2Geo_ADM1Code',   'Actor2Geo_ADM2Code',   'Actor2Geo_Lat',
+                  'Actor2Geo_Long', 'Actor2Geo_FeatureID',  'ActionGeo_Type',   'ActionGeo_FullName',
+                  'ActionGeo_CountryCode',  'ActionGeo_ADM1Code',   'ActionGeo_ADM2Code',   'ActionGeo_Lat',
+                  'ActionGeo_Long', 'ActionGeo_FeatureID',  'DATEADDED',    'SOURCEURL']
+        df = pd.concat([pd.read_csv(file,delimiter="\t",
+                                    header=None,
+                                    on_bad_lines=None,
+                                    encoding='ISO-8859-1',
+                                    names=headers,
+                                    usecols=['GlobalEventID','Day',	'Actor1Code',	'Actor1Name',	'Actor1CountryCode','Actor2Code',	'Actor2Name',	'Actor2CountryCode',	'IsRootEvent',	'EventCode',	'EventBaseCode',	'EventRootCode',	'QuadClass',	'GoldsteinScale',	'NumMentions',	'NumSources',	'NumArticles',	'AvgTone',	'Actor1Geo_Type',	'Actor1Geo_FullName',	'Actor1Geo_Lat',	'Actor1Geo_Long',	'Actor2Geo_Type',	'Actor2Geo_FullName',	'Actor2Geo_Lat',	'Actor2Geo_Long',	'ActionGeo_Type',	'ActionGeo_FullName',	'ActionGeo_Lat',	'ActionGeo_Long',	'DATEADDED']
+                        )
+                        for file in files]
+                        )
+    dir_dest = dir_data+'/batch_'+str(start).replace(' ', '_')+'_'+str(end).replace(' ', '_')+'_'+str(type)+'.csv'
+    print(dir_dest)
+    df.to_csv(dir_dest)
 
 def download_zip_2(urls, fns):
     t0 = time.time()
@@ -202,6 +273,8 @@ def main():
     t0 = time.time()
     results = download_parallel(inputs)
     unzip_parallel(results)
+    transform_batch(dir_data, start, end, type)
+    remove_files(dir_data)
     # extract(inputs)
     print(f"Total time: {time.time() - t0}")
     # extract(start, end, type, dir_data, trans)
@@ -256,4 +329,4 @@ def main_test():
         transform(dir_data,file, start, end, type)
         os.remove(file)
 if __name__=='__main__':
-    sequential()
+    main()
