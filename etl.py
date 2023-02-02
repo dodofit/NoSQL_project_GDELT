@@ -174,16 +174,16 @@ def unzip_transform(filepath, dir_data, start, end, type):
         # Extracting all the members of the zip
         # into a specific location.
         zObject.extractall(path=dir_data)
-    csv_path = filepath[:-7]+'csv'
+    csv_path = filepath[:-4]
     os.remove(filepath)
-    #os.rename(csv_path, csv_path.replace('CSV', 'csv'))
+    os.rename(csv_path, csv_path.replace('CSV', 'csv'))
     print('csv_path = {}'.format(csv_path))
 
     #with open(csv_path, 'r') as file:
     #print('open csv path = {}'.format(file))
     transform(dir_data, csv_path, start, end, type)
 
-    os.remove(csv_path)
+    #os.remove(csv_path)
 
 
 def load():
@@ -226,8 +226,8 @@ def sequential():
     with ThreadPool(processes=cpus-1) as pool:
         for url, file_name in inputs:
             pool.apply_async(download_zip_2(url, file_name))
-            dir = dir_data+'/'+file_name
-            pool.apply_async(unzip_transform(dir_data+'/'+file_name, dir_data,start, end, type))
+            filepath = dir_data+'/'+file_name
+            pool.apply_async(unzip_transform(filepath, dir_data,start, end, type))
 
     print(f"Total time: {time.time() - t0}")
 
