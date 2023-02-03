@@ -16,6 +16,11 @@ ext_dict = {'export': 'CSV',
 
 dir_data = './data/raw'
 
+dir_import = '/var/lib/neo4j/import'
+ex = os.path.isdir(dir_import)
+if ex==False:
+    dir_import = dir_data
+
 def create_urls(date_range, type, trans):
     extension = ext_dict[type]
     #if trans:
@@ -82,8 +87,8 @@ def unzip_parallel(args):
     results = pool.imap_unordered(unzip, args, chunksize=5)
     pool.close()
     pool.join()
-def remove_files(dir_data):
-    files_list = glob.glob(dir_data+'/*', recursive=True)
+def remove_files(dir_data,type):
+    files_list = glob.glob(dir_data+ f'/*{type}.csv', recursive=True)
     batch_files = glob.glob(dir_data+'/batch*', recursive=True)
     wrong = [i for i in files_list if i not in batch_files]
     #print(wrong)
@@ -162,7 +167,7 @@ def transform(dir_data, file, start, end, type):
 
     return None
 
-def transform_batch(dir_data, start, end, type):
+def transform_batch(dir_data,dir_import, start, end, type):
     path = Path(dir_data)
     files = list(path.glob(f'*translation.{type}.csv'))
     if type=='gkg':
@@ -222,9 +227,8 @@ def transform_batch(dir_data, start, end, type):
                         )
                         for file in files]
                         )
-    dir_dest = dir_data+'/batch_'+str(start).replace(' ', '_')+'_'+str(end).replace(' ', '_')+'_'+str(type)+'.csv'
-    print(dir_dest)
-    df.to_csv(dir_dest)
+    dir_dest = dir_import+'/batch_'+str(start).replace(' ', '_')+'_'+str(end).replace(' ', '_')+'_'+str(type)+'.csv'
+    df.to_csv(dir_dest, index=False)
 
 def download_zip_2(urls, fns):
     t0 = time.time()
@@ -273,8 +277,8 @@ def main():
     t0 = time.time()
     results = download_parallel(inputs)
     unzip_parallel(results)
-    transform_batch(dir_data, start, end, type)
-    remove_files(dir_data)
+    transform_batch(dir_data,dir_import, start, end, type)
+    remove_files(dir_data, type)
     # extract(inputs)
     print(f"Total time: {time.time() - t0}")
     # extract(start, end, type, dir_data, trans)
