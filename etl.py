@@ -3,6 +3,7 @@ import glob
 from pathlib import Path
 import pandas as pd
 from datetime import datetime as dt
+from datetime import timedelta
 from zipfile import ZipFile
 import re, time, requests
 from multiprocessing import cpu_count
@@ -70,6 +71,7 @@ def unzip(args):
     csv_path = filepath[:-4]
     os.remove(filepath)
     os.rename(csv_path, csv_path.replace('CSV', 'csv'))
+    print()
 
 def download_parallel(args):
     cpus = cpu_count()
@@ -170,6 +172,7 @@ def transform(dir_data, file, start, end, type):
 def transform_batch(dir_data,dir_import, start, end, type):
     path = Path(dir_data)
     files = list(path.glob(f'*translation.{type}.csv'))
+     
     if type=='gkg':
         headers = ['GKGRecordID', 'DATE', 'SourceCollectionIdentifier', 'SourceCommonName', 'DocumentIdentifier',
                    'Counts', 'V2Counts', 'Themes', 'V2Themes', 'Locations', 'V2Locations', 'Persons', 'V2Persons',
@@ -180,27 +183,34 @@ def transform_batch(dir_data,dir_import, start, end, type):
                                     on_bad_lines=None,
                                     encoding='ISO-8859-1',
                                     names=headers,
-                                    usecols= ['GKGRecordID','DATE','SourceCollectionIdentifier','SourceCommonName','DocumentIdentifier','Counts','Themes','Organizations','V2Tone','Dates','TranslationInfo']
+                                    usecols= ['GKGRecordID','Persons','DATE','SourceCollectionIdentifier','SourceCommonName','DocumentIdentifier','Counts','Themes','Organizations','V2Tone','Dates','TranslationInfo']
                                     )
                                     for file in files]
                         )
-        #df['TranslationInfo'] = df['TranslationInfo'].astype(str).apply(
-        #    lambda x: re.sub(r'(srclc:)([a-z]+)(.*)', r'\2', x))  # extracting language information
+        df['TranslationInfo'] = df['TranslationInfo'].astype(str).apply(
+            lambda x: re.sub(r'(srclc:)([a-z]+)(.*)', r'\2', x))  # extracting language information
     elif type=='mentions':
         headers = ['GlobalEventID', 'EventTimeDate', 'MentionTimeDate', 'MentionType', 'MentionSourceName',
                    'MentionIdentifier', 'SentenceID', 'Actor1CharOffset', 'Actor2CharOffset', 'ActionCharOffset',
                    'InRawText', 'Confidence', 'MentionDocLen', 'MentionDocTone', 'MentionDocTranslationInfo','Extras']
-        df = pd.concat([pd.read_csv(file,delimiter="\t",
+        f=[]
+        for file in files:
+            try :
+
+                df = pd.read_csv(file,delimiter="\t",
                                     header=None,
                                     on_bad_lines=None,
                                     encoding='ISO-8859-1',
                                     names=headers,
                                     usecols=['GlobalEventID','EventTimeDate','MentionTimeDate','MentionType','MentionSourceName','MentionIdentifier','SentenceID','Confidence','MentionDocLen','MentionDocTone','MentionDocTranslationInfo']
-                     )
-                     for file in files]
                         )
 
-
+                f.append(df)
+            except :
+                print(f'Error while reading file {file}')
+        print(len(f))
+        df= pd.concat(f)
+        f=[]
         df['MentionDocTranslationInfo'] = df['MentionDocTranslationInfo'].astype(str).apply(
             lambda x: re.sub(r'(srclc:)([a-z]+)(.*)', r'\2', x))  # extracting language information
     else:
@@ -218,15 +228,24 @@ def transform_batch(dir_data,dir_import, start, end, type):
                   'Actor2Geo_Long', 'Actor2Geo_FeatureID',  'ActionGeo_Type',   'ActionGeo_FullName',
                   'ActionGeo_CountryCode',  'ActionGeo_ADM1Code',   'ActionGeo_ADM2Code',   'ActionGeo_Lat',
                   'ActionGeo_Long', 'ActionGeo_FeatureID',  'DATEADDED',    'SOURCEURL']
-        df = pd.concat([pd.read_csv(file,delimiter="\t",
+        f=[]
+        for file in files:
+            try :
+
+                df = pd.read_csv(file,delimiter="\t",
                                     header=None,
                                     on_bad_lines=None,
                                     encoding='ISO-8859-1',
                                     names=headers,
                                     usecols=['GlobalEventID','Day',	'Actor1Code',	'Actor1Name',	'Actor1CountryCode','Actor2Code',	'Actor2Name',	'Actor2CountryCode',	'IsRootEvent',	'EventCode',	'EventBaseCode',	'EventRootCode',	'QuadClass',	'GoldsteinScale',	'NumMentions',	'NumSources',	'NumArticles',	'AvgTone',	'Actor1Geo_Type',	'Actor1Geo_FullName',	'Actor1Geo_Lat',	'Actor1Geo_Long',	'Actor2Geo_Type',	'Actor2Geo_FullName',	'Actor2Geo_Lat',	'Actor2Geo_Long',	'ActionGeo_Type',	'ActionGeo_FullName',	'ActionGeo_Lat',	'ActionGeo_Long',	'DATEADDED']
                         )
-                        for file in files]
-                        )
+
+                f.append(df)
+            except :
+                print(f'Error while reading file {file}')
+        df= pd.concat(f)
+        f=[]
+    print(df)
     dir_dest = dir_import+'/batch_'+str(start).replace(' ', '_')+'_'+str(end).replace(' ', '_')+'_'+str(type)+'.csv'
     df.to_csv(dir_dest, index=False)
 
@@ -259,33 +278,83 @@ def unzip_transform(filepath, dir_data, start, end, type):
     transform(dir_data, csv_path, start, end, type)
 
     os.remove(csv_path)
-
-
+def make_big_batch(dir_import, start, end, type):
+    path = Path(dir_import)
+    files = list(path.glob('*'))
+    df_final = pd.DataFrame()
+    for file in files:
+        df = pd.read_csv(file)
+        df_final = pd.concat([df_final, df], ignore_index=True)
+        os.remove(file)
+    start = str(start).replace(' ', '_').replace(':', '')
+    end = str(end).replace(' ', '_').replace(':', '')
+    df_final.to_csv(dir_import+f'/big_batch_{start}_{end}_{type}.csv')
 def load():
     pass
 
 def main():
-    start = dt.strptime(sys.argv[1], '%Y%m%d%H')
-    end = dt.strptime(sys.argv[2], '%Y%m%d%H')
+    start = dt.strptime(sys.argv[1], '%Y%m%d%H%M')
+    end = dt.strptime(sys.argv[2], '%Y%m%d%H%M')
     type = sys.argv[3]
     trans = sys.argv[4] == True
     date_range = pd.date_range(start, end, freq='15T').to_pydatetime()
     urls=create_urls(date_range, type, trans)
     fns= create_fns(date_range, type, trans)
     inputs = zip(urls, fns)
+    
+    if type =='gkg':
+        t1 = time.time() 
+        range_date = pd.date_range(start, end, freq='H')
+        print(range_date, len(range_date))
+        count = len(range_date)
+        per = 4
+        k = count//per
+        start2=start
+        for period in range(k-1):
+            print(period)
+            t0 = time.time()
+            end2= start2 + timedelta(hours=per)
+            tmp = timedelta(minutes=15)
+            date_range = pd.date_range(start2,end2-tmp, freq='15T').to_pydatetime()
+            urls= create_urls(date_range, type, trans)
+            fns= create_fns(date_range, type, trans)
+            inputs = zip(urls, fns)
+            t0 = time.time()
+            results = download_parallel(inputs)
+            unzip_parallel(results)
+            #print(start2, end2)
+            transform_batch(dir_data,dir_import, start2, end2-tmp, type)
+            remove_files(dir_data, type)
+            print(f"Total time one batch: {time.time() - t0}")
+            start2= end2
 
-    t0 = time.time()
-    results = download_parallel(inputs)
-    unzip_parallel(results)
-    transform_batch(dir_data,dir_import, start, end, type)
-    remove_files(dir_data, type)
-    # extract(inputs)
-    print(f"Total time: {time.time() - t0}")
-    # extract(start, end, type, dir_data, trans)
+        #print(end2, end, start2)
+        date_range = pd.date_range(end2, end, freq='15T').to_pydatetime()
+        urls= create_urls(date_range, type, trans)
+        fns= create_fns(date_range, type, trans)
+        inputs = zip(urls, fns)
+        results = download_parallel(inputs)
+        unzip_parallel(results)
+        transform_batch(dir_data,dir_import, end2, end, type)
+        remove_files(dir_data, type)
+
+        print(f"Total time every batch: {time.time() - t1}")
+        t2 = time.time()
+        make_big_batch(dir_import, start, end, type)
+        print(f"Total time make big batch: {time.time() - t2}")
+    else:
+    #extract(inputs)
+
+        t0 = time.time()
+        results = download_parallel(inputs)
+        unzip_parallel(results)
+        transform_batch(dir_data,dir_import, start, end, type)
+        remove_files(dir_data, type)
+        print(f"Total time: {time.time() - t0}")
 
 def sequential():
-    start = dt.strptime(sys.argv[1], '%Y%m%d%H')
-    end = dt.strptime(sys.argv[2], '%Y%m%d%H')
+    start = dt.strptime(sys.argv[1], '%Y%m%d%H%M')
+    end = dt.strptime(sys.argv[2], '%Y%m%d%H%M')
     type = sys.argv[3]
     trans = sys.argv[4] == 'True'
     date_range = pd.date_range(start, end, freq='15T').to_pydatetime()
