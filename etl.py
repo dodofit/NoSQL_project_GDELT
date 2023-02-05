@@ -97,6 +97,7 @@ def remove_files(dir_data,type):
     for file_path in files_list:
         try:
             os.remove(file_path)
+            print("file {} deleted".format(file_path))
         except OSError:
             print("Error while deleting file {}".format(file_path))
 
@@ -310,13 +311,13 @@ def main():
     fns= create_fns(date_range, type, trans)
     inputs = zip(urls, fns)
     
-    if type =='export':
+    if type =='gkg':
         t1 = time.time() 
         range_date = pd.date_range(start, end, freq='H')
         print(range_date, len(range_date))
         count = len(range_date)
         print(count)
-        per = 360
+        per = 120
         k = count//per
         print(k)
         start2=start
