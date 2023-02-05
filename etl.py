@@ -91,10 +91,10 @@ def unzip_parallel(args):
     pool.join()
 def remove_files(dir_data,type):
     files_list = glob.glob(dir_data+ f'/*{type}.csv', recursive=True)
-    batch_files = glob.glob(dir_data+'/batch*', recursive=True)
-    wrong = [i for i in files_list if i not in batch_files]
+    #batch_files = glob.glob(dir_data+'/batch*', recursive=True)
+    #wrong = [i for i in files_list if i not in batch_files]
     #print(wrong)
-    for file_path in wrong:
+    for file_path in files_list:
         try:
             os.remove(file_path)
         except OSError:
@@ -171,7 +171,7 @@ def transform(dir_data, file, start, end, type):
 
 def transform_batch(dir_data,dir_import, start, end, type):
     path = Path(dir_data)
-    files = list(path.glob(f'*translation.{type}.csv'))
+    files = list(path.glob(f'*{type}.csv'))
      
     if type=='gkg':
         headers = ['GKGRecordID', 'DATE', 'SourceCollectionIdentifier', 'SourceCommonName', 'DocumentIdentifier',
@@ -206,6 +206,7 @@ def transform_batch(dir_data,dir_import, start, end, type):
                         )
 
                 f.append(df)
+                print(len(f))
             except :
                 print(f'Error while reading file {file}')
         print(len(f))
@@ -248,6 +249,13 @@ def transform_batch(dir_data,dir_import, start, end, type):
     print(df)
     dir_dest = dir_import+'/batch_'+str(start).replace(' ', '_')+'_'+str(end).replace(' ', '_')+'_'+str(type)+'.csv'
     df.to_csv(dir_dest, index=False)
+
+def transform_batch_parallel(dir_data,dir_import, start, end, type):
+    cpus = cpu_count()
+    pool = ThreadPool(cpus - 1)
+    results = pool.imap_unordered(transform_batch(dir_data,dir_import, start, end, type), args, chunksize=5)
+    pool.close()
+    pool.join()
 
 def download_zip_2(urls, fns):
     t0 = time.time()
@@ -335,7 +343,7 @@ def main():
         inputs = zip(urls, fns)
         results = download_parallel(inputs)
         unzip_parallel(results)
-        transform_batch(dir_data,dir_import, end2, end, type)
+        transform_batch_parallel(dir_data,dir_import, end2, end, type)
         remove_files(dir_data, type)
 
         print(f"Total time every batch: {time.time() - t1}")
