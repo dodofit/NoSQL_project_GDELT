@@ -288,7 +288,7 @@ def unzip_transform(filepath, dir_data, start, end, type):
     os.remove(csv_path)
 def make_big_batch(dir_import, start, end, type):
     path = Path(dir_import)
-    files = list(path.glob('*'))
+    files = list(path.glob(f'batch*_{type}.csv'))
     df_final = pd.DataFrame()
     for file in files:
         df = pd.read_csv(file)
@@ -310,15 +310,18 @@ def main():
     fns= create_fns(date_range, type, trans)
     inputs = zip(urls, fns)
     
-    if type =='gkg':
+    if type =='export':
         t1 = time.time() 
         range_date = pd.date_range(start, end, freq='H')
         print(range_date, len(range_date))
         count = len(range_date)
-        per = 4
+        print(count)
+        per = 360
         k = count//per
+        print(k)
         start2=start
-        for period in range(k-1):
+        end2=end
+        for period in range(k):
             print(period)
             t0 = time.time()
             end2= start2 + timedelta(hours=per)
@@ -343,13 +346,13 @@ def main():
         inputs = zip(urls, fns)
         results = download_parallel(inputs)
         unzip_parallel(results)
-        transform_batch_parallel(dir_data,dir_import, end2, end, type)
+        transform_batch(dir_data,dir_import, end2, end, type)
         remove_files(dir_data, type)
 
         print(f"Total time every batch: {time.time() - t1}")
         t2 = time.time()
-        make_big_batch(dir_import, start, end, type)
-        print(f"Total time make big batch: {time.time() - t2}")
+        #make_big_batch(dir_import, start, end, type)
+        #print(f"Total time make big batch: {time.time() - t2}")
     else:
     #extract(inputs)
 
