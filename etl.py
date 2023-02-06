@@ -107,69 +107,6 @@ def extract(inputs):
         unzip(result)
         #print('url:', result[0], 'time (s):', result[1])
 
-#def sequential():
-#    for input in inputs:
-#        result = download_zip(input)
-#        unzip(result)
-#        #print('url:', result[0], 'time (s):', result[1])
-def transform(dir_data, file, start, end, type):
-    #path = Path(dir_data)
-    #files = list(path.glob(f'*translation.{type}.csv'))
-    if type=='gkg':
-        headers = ['GKGRecordID', 'DATE', 'SourceCollectionIdentifier', 'SourceCommonName', 'DocumentIdentifier',
-                   'Counts', 'V2Counts', 'Themes', 'V2Themes', 'Locations', 'V2Locations', 'Persons', 'V2Persons',
-                   'Organizations', 'V2Organizations', 'V2Tone', 'Dates', 'GCAM', 'SharingImage', 'RelatedImages',
-                   'SocialImageEmbeds', 'SocialVideoEmbeds', 'Quotations', 'AllNames', 'Amounts', 'TranslationInfo','Extras']
-        df = pd.read_csv(file, delimiter="\t",
-                                    header=None,
-                                    on_bad_lines=None,
-                                    encoding='ISO-8859-1',
-                                    names=headers,
-                                    )
-        df['TranslationInfo'] = df['TranslationInfo'].astype(str).apply(
-            lambda x: re.sub(r'(srclc:)([a-z]+)(.*)', r'\2', x))  # extracting language information
-    elif type=='mentions':
-        headers = ['GlobalEventID', 'EventTimeDate', 'MentionTimeDate', 'MentionType', 'MentionSourceName',
-                   'MentionIdentifier', 'SentenceID', 'Actor1CharOffset', 'Actor2CharOffset', 'ActionCharOffset',
-                   'InRawText', 'Confidence', 'MentionDocLen', 'MentionDocTone', 'MentionDocTranslationInfo','Extras']
-        df = pd.read_csv(file,delimiter="\t",
-                                    header=None,
-                                    on_bad_lines=None,
-                                    encoding='ISO-8859-1',
-                                    names=headers,
-                     )
-
-
-        df['MentionDocTranslationInfo'] = df['MentionDocTranslationInfo'].astype(str).apply(
-            lambda x: re.sub(r'(srclc:)([a-z]+)(.*)', r'\2', x))  # extracting language information
-    else:
-        headers= ['GlobalEventID','Day',	'MonthYear',	'Year',	'FractionDate',	'Actor1Code',
-                  'Actor1Name',	'Actor1CountryCode',	'Actor1KnownGroupCode',	'Actor1EthnicCode',
-                  'Actor1Religion1Code',	'Actor1Religion2Code',	'Actor1Type1Code',	'Actor1Type2Code',
-                  'Actor1Type3Code',	'Actor2Code',	'Actor2Name',	'Actor2CountryCode',
-                  'Actor2KnownGroupCode',	'Actor2EthnicCode',	'Actor2Religion1Code',	'Actor2Religion2Code',
-                  'Actor2Type1Code',	'Actor2Type2Code',	'Actor2Type3Code',	'IsRootEvent',	'EventCode',
-                  'EventBaseCode',	'EventRootCode',	'QuadClass',	'GoldsteinScale',	'NumMentions',
-                  'NumSources',	'NumArticles',	'AvgTone',	'Actor1Geo_Type',	'Actor1Geo_FullName',
-                  'Actor1Geo_CountryCode',	'Actor1Geo_ADM1Code',	'Actor1Geo_ADM2Code',	'Actor1Geo_Lat',
-                  'Actor1Geo_Long',	'Actor1Geo_FeatureID',	'Actor2Geo_Type',	'Actor2Geo_FullName',
-                  'Actor2Geo_CountryCode',	'Actor2Geo_ADM1Code',	'Actor2Geo_ADM2Code',	'Actor2Geo_Lat',
-                  'Actor2Geo_Long',	'Actor2Geo_FeatureID',	'ActionGeo_Type',	'ActionGeo_FullName',
-                  'ActionGeo_CountryCode',	'ActionGeo_ADM1Code',	'ActionGeo_ADM2Code',	'ActionGeo_Lat',
-                  'ActionGeo_Long',	'ActionGeo_FeatureID',	'DATEADDED',	'SOURCEURL']
-        df = pd.read_csv(file,delimiter="\t",
-                                    header=None,
-                                    on_bad_lines=None,
-                                    encoding='ISO-8859-1',
-                                    names=headers,
-                                    usecols = ['GlobalEventID','Day',	'Actor1Code',	'Actor1Name',	'Actor1CountryCode','Actor2Code',	'Actor2Name',	'Actor2CountryCode',	'IsRootEvent',	'EventCode',	'EventBaseCode',	'EventRootCode',	'QuadClass',	'GoldsteinScale',	'NumMentions',	'NumSources',	'NumArticles',	'AvgTone',	'Actor1Geo_Type',	'Actor1Geo_FullName',	'Actor1Geo_Lat',	'Actor1Geo_Long',	'Actor2Geo_Type',	'Actor2Geo_FullName',	'Actor2Geo_Lat',	'Actor2Geo_Long',	'ActionGeo_Type',	'ActionGeo_FullName',	'ActionGeo_Lat',	'ActionGeo_Long',	'DATEADDED']
-                        )
-    dir_dest = dir_data+'/headers_'+str(file)[13:-3]+'pkl'
-    print(dir_dest)
-    df.to_pickle(dir_dest)
-
-    return None
-
 def transform_batch(dir_data,dir_import, start, end, type):
     path = Path(dir_data)
     files = list(path.glob(f'*{type}.csv'))
@@ -179,42 +116,14 @@ def transform_batch(dir_data,dir_import, start, end, type):
                    'Counts', 'V2Counts', 'Themes', 'V2Themes', 'Locations', 'V2Locations', 'Persons', 'V2Persons',
                    'Organizations', 'V2Organizations', 'V2Tone', 'Dates', 'GCAM', 'SharingImage', 'RelatedImages',
                    'SocialImageEmbeds', 'SocialVideoEmbeds', 'Quotations', 'AllNames', 'Amounts', 'TranslationInfo','Extras']
-        df = pd.concat([pd.read_csv(file, delimiter="\t",
-                                    header=None,
-                                    on_bad_lines=None,
-                                    encoding='ISO-8859-1',
-                                    names=headers,
-                                    usecols= ['GKGRecordID','Persons','DATE','SourceCollectionIdentifier','SourceCommonName','DocumentIdentifier','Counts','Themes','Organizations','V2Tone','Dates','TranslationInfo']
-                                    )
-                                    for file in files]
-                        )
-        df['TranslationInfo'] = df['TranslationInfo'].astype(str).apply(
-            lambda x: re.sub(r'(srclc:)([a-z]+)(.*)', r'\2', x))  # extracting language information
+         usecols= ['GKGRecordID','Persons','DATE','SourceCollectionIdentifier','SourceCommonName','DocumentIdentifier','Counts','Themes','Organizations','V2Tone','Dates','TranslationInfo']
+                                    
     elif type=='mentions':
         headers = ['GlobalEventID', 'EventTimeDate', 'MentionTimeDate', 'MentionType', 'MentionSourceName',
                    'MentionIdentifier', 'SentenceID', 'Actor1CharOffset', 'Actor2CharOffset', 'ActionCharOffset',
                    'InRawText', 'Confidence', 'MentionDocLen', 'MentionDocTone', 'MentionDocTranslationInfo','Extras']
-        f=[]
-        for file in files:
-            try :
-
-                df = pd.read_csv(file,delimiter="\t",
-                                    header=None,
-                                    on_bad_lines=None,
-                                    encoding='ISO-8859-1',
-                                    names=headers,
-                                    usecols=['GlobalEventID','EventTimeDate','MentionTimeDate','MentionType','MentionSourceName','MentionIdentifier','SentenceID','Confidence','MentionDocLen','MentionDocTone','MentionDocTranslationInfo']
-                        )
-
-                f.append(df)
-                print(len(f))
-            except :
-                print(f'Error while reading file {file}')
-        print(len(f))
-        df= pd.concat(f)
-        f=[]
-        df['MentionDocTranslationInfo'] = df['MentionDocTranslationInfo'].astype(str).apply(
-            lambda x: re.sub(r'(srclc:)([a-z]+)(.*)', r'\2', x))  # extracting language information
+        usecols=['GlobalEventID','EventTimeDate','MentionTimeDate','MentionType','MentionSourceName','MentionIdentifier','SentenceID','Confidence','MentionDocLen','MentionDocTone','MentionDocTranslationInfo']
+ 
     else:
         headers= ['GlobalEventID','Day',    'MonthYear',    'Year', 'FractionDate', 'Actor1Code',
                   'Actor1Name', 'Actor1CountryCode',    'Actor1KnownGroupCode', 'Actor1EthnicCode',
@@ -230,33 +139,39 @@ def transform_batch(dir_data,dir_import, start, end, type):
                   'Actor2Geo_Long', 'Actor2Geo_FeatureID',  'ActionGeo_Type',   'ActionGeo_FullName',
                   'ActionGeo_CountryCode',  'ActionGeo_ADM1Code',   'ActionGeo_ADM2Code',   'ActionGeo_Lat',
                   'ActionGeo_Long', 'ActionGeo_FeatureID',  'DATEADDED',    'SOURCEURL']
-        f=[]
-        for file in files:
-            try :
+        usecols=['GlobalEventID','Day',	'Actor1Code',	'Actor1Name',	'Actor1CountryCode','Actor2Code',	'Actor2Name',	'Actor2CountryCode',	'IsRootEvent',	'EventCode',	'EventBaseCode',	'EventRootCode',	'QuadClass',	'GoldsteinScale',	'NumMentions',	'NumSources',	'NumArticles',	'AvgTone',	'Actor1Geo_Type',	'Actor1Geo_FullName',	'Actor1Geo_Lat',	'Actor1Geo_Long',	'Actor2Geo_Type',	'Actor2Geo_FullName',	'Actor2Geo_Lat',	'Actor2Geo_Long',	'ActionGeo_Type',	'ActionGeo_FullName',	'ActionGeo_Lat',	'ActionGeo_Long',	'DATEADDED']
+  
+    f=[]
+    for file in files:
+        try :
 
-                df = pd.read_csv(file,delimiter="\t",
+
+            df = pd.read_csv(file, delimiter="\t",
                                     header=None,
                                     on_bad_lines=None,
                                     encoding='ISO-8859-1',
                                     names=headers,
-                                    usecols=['GlobalEventID','Day',	'Actor1Code',	'Actor1Name',	'Actor1CountryCode','Actor2Code',	'Actor2Name',	'Actor2CountryCode',	'IsRootEvent',	'EventCode',	'EventBaseCode',	'EventRootCode',	'QuadClass',	'GoldsteinScale',	'NumMentions',	'NumSources',	'NumArticles',	'AvgTone',	'Actor1Geo_Type',	'Actor1Geo_FullName',	'Actor1Geo_Lat',	'Actor1Geo_Long',	'Actor2Geo_Type',	'Actor2Geo_FullName',	'Actor2Geo_Lat',	'Actor2Geo_Long',	'ActionGeo_Type',	'ActionGeo_FullName',	'ActionGeo_Lat',	'ActionGeo_Long',	'DATEADDED']
-                        )
+                                    usecols = usecols
+                                    )
+                                    
+            
+            f.append(df)
+            os.remove(file))
+        except :
+            print(f'Error while reading file {file}')
+    df= pd.concat(f)
+ 
+    if type =='gkg':
+        df['TranslationInfo'] = df['TranslationInfo'].astype(str).apply(
+            lambda x: re.sub(r'(srclc:)([a-z]+)(.*)', r'\2', x))  # extracting language information
+    
 
-                f.append(df)
-            except :
-                print(f'Error while reading file {file}')
-        df= pd.concat(f)
-        f=[]
-    print(df)
+    elif type=='mentions':
+        
+        df['MentionDocTranslationInfo'] = df['MentionDocTranslationInfo'].astype(str).apply(
+            lambda x: re.sub(r'(srclc:)([a-z]+)(.*)', r'\2', x))  # extracting language information
     dir_dest = dir_import+'/batch_'+str(start).replace(' ', '_')+'_'+str(end).replace(' ', '_')+'_'+str(type)+'.csv'
     df.to_csv(dir_dest, index=False)
-
-def transform_batch_parallel(dir_data,dir_import, start, end, type):
-    cpus = cpu_count()
-    pool = ThreadPool(cpus - 1)
-    results = pool.imap_unordered(transform_batch(dir_data,dir_import, start, end, type), args, chunksize=5)
-    pool.close()
-    pool.join()
 
 def download_zip_2(urls, fns):
     t0 = time.time()
@@ -314,16 +229,13 @@ def main():
     if type =='gkg':
         t1 = time.time() 
         range_date = pd.date_range(start, end, freq='H')
-        print(range_date, len(range_date))
         count = len(range_date)
-        print(count)
         per = 120
         k = count//per
         print(k)
         start2=start
         end2=end
         for period in range(k):
-            print(period)
             t0 = time.time()
             end2= start2 + timedelta(hours=per)
             tmp = timedelta(minutes=15)
@@ -334,13 +246,10 @@ def main():
             t0 = time.time()
             results = download_parallel(inputs)
             unzip_parallel(results)
-            #print(start2, end2)
             transform_batch(dir_data,dir_import, start2, end2-tmp, type)
             remove_files(dir_data, type)
             print(f"Total time one batch: {time.time() - t0}")
             start2= end2
-
-        #print(end2, end, start2)
         date_range = pd.date_range(end2, end, freq='15T').to_pydatetime()
         urls= create_urls(date_range, type, trans)
         fns= create_fns(date_range, type, trans)
@@ -355,7 +264,6 @@ def main():
         #make_big_batch(dir_import, start, end, type)
         #print(f"Total time make big batch: {time.time() - t2}")
     else:
-    #extract(inputs)
 
         t0 = time.time()
         results = download_parallel(inputs)
@@ -390,28 +298,5 @@ def sequential():
     print(f"Total time: {time.time() - t0}")
 
 
-def main_test():
-    start = dt.strptime(sys.argv[1], '%Y%m%d%H')
-    end = dt.strptime(sys.argv[2], '%Y%m%d%H')
-    type = sys.argv[3]
-    trans = sys.argv[4] == 'True'
-    date_range = pd.date_range(start, end, freq='15T').to_pydatetime()
-    urls= create_urls(date_range, type, trans)
-    fns= create_fns(date_range, type, trans)
-
-    inputs = zip(urls, fns)
-
-    t0 = time.time()
-    results = download_parallel(inputs)
-    unzip_parallel(results)
-    # extract(inputs)
-    print(f"Total time: {time.time() - t0}")
-    # extract(start, end, type, dir_data, trans)
-
-    path = Path(dir_data)
-    files = list(path.glob(f'*.{type}.csv'))
-    for file in files:
-        transform(dir_data,file, start, end, type)
-        os.remove(file)
 if __name__=='__main__':
     main()
