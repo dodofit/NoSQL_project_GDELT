@@ -91,7 +91,7 @@ create_actor2_event = """
         """
 
 def main():
-    files = os.listdir('data/raw/')
+    files = os.listdir('/var/lib/neo4j/import/')
     export_files = [fn for fn in files if "export.csv" in fn]
     print(export_files)
     for fn in export_files:
