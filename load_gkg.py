@@ -60,7 +60,7 @@ create_resource_themes = """
                 UNWIND split(row.Themes, ';') as theme
                 MATCH (t:Theme {{name:theme}})
                 MATCH (resource:Resource {{originalID : row.DocumentIdentifier}})
-                CREATE (resource)-[:HAS]->(t)
+                MERGE (resource)-[:HAS]->(t)
             }} IN TRANSACTIONS OF 15000 ROWS;
         """
 
