@@ -30,7 +30,7 @@ CALL {{
     SET
         event.date = Datetime(row.Day),
         event.type = row.EventCode
-}} IN TRANSACTIONS OF 15000 ROWS;
+}} IN TRANSACTIONS OF 10000 ROWS;
 """
 
 # Create relationship between event and country

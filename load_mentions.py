@@ -28,7 +28,7 @@ create_resource = """
             }} IN TRANSACTIONS OF 15000 ROWS;
         """
 
-create_resource_event = """ 
+create_resource_event = """
             LOAD CSV WITH HEADERS FROM 'file:///{fn}' AS row
             WITH row WHERE row.MentionIdentifier IS NOT NULL AND row.GlobalEventID IS NOT NULL
             CALL {{
